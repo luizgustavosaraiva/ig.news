@@ -1,25 +1,26 @@
 import { ReactNode } from 'react';
 import Head from 'next/head';
-import Link from 'next/link'
+import Link from 'next/link';
 import styles from './styles.module.scss';
 import { GetStaticProps } from 'next';
 import { getPrismicClient } from '../../services/prismic';
 import Prismic from '@prismicio/client';
 import { RichText } from 'prismic-dom';
-
+import { useSession } from 'next-auth/react';
 
 type Post = {
-  slug: string,
-  title: string,
-  excerpt: string,
-  updatedAt: string
-}
+  slug: string;
+  title: string;
+  excerpt: string;
+  updatedAt: string;
+};
 type PostsProps = {
   children?: ReactNode;
-  posts: Post[]
-}
+  posts: Post[];
+};
 
 export default function Posts({ posts }: PostsProps) {
+  const session = useSession().data;
   return (
     <>
       <Head>
@@ -28,18 +29,22 @@ export default function Posts({ posts }: PostsProps) {
 
       <main className={styles.container}>
         <div className={styles.post_list}>
-          {posts.map(post => (            
-            <Link href={`/posts/${post.slug}`} key={post.slug} passHref>
+          {posts.map((post) => (
+            <Link
+              href={
+                session?.activeSubscription
+                  ? `/posts/${post.slug}`
+                  : `/posts/preview/${post.slug}`
+              }
+              key={post.slug}
+              passHref>
               <a>
                 <time>{post.updatedAt}</time>
                 <strong>{post.title}</strong>
-                <p>
-                  {post.excerpt}
-                </p>
+                <p>{post.excerpt}</p>
               </a>
             </Link>
-          ))}         
-          
+          ))}
         </div>
       </main>
     </>
@@ -61,12 +66,15 @@ export const getStaticProps: GetStaticProps = async () => {
     return {
       slug: post.uid,
       title: RichText.asText(post.data.title),
-      excerpt: post.data.content.find((content) => content.type === 'paragraph')?.text ?? '',
-      updatedAt: new Date(post.last_publication_date || '').toLocaleDateString('pt-BR',
-        { 
+      excerpt:
+        post.data.content.find((content) => content.type === 'paragraph')
+          ?.text ?? '',
+      updatedAt: new Date(post.last_publication_date || '').toLocaleDateString(
+        'pt-BR',
+        {
           day: '2-digit',
           month: 'long',
-          year: 'numeric' 
+          year: 'numeric',
         }
       ),
     };
@@ -74,7 +82,7 @@ export const getStaticProps: GetStaticProps = async () => {
 
   return {
     props: {
-      posts
+      posts,
     },
   };
 };
